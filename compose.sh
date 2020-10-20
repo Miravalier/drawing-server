@@ -39,9 +39,10 @@ if [[ $? != 0 ]]; then
     exit 1
 fi
 
-# Check if any immediately went into 'Exit' state.
+# Check if any immediately went into 'Exit' state and print their logs.
 info "Displaying 'docker-compose ps'"
 sleep 1
 docker-compose ps
+docker-compose logs --timestamps --tail=32
 
 exit 0

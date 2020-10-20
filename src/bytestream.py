@@ -2,7 +2,7 @@ from typing import Union
 import struct
 
 
-class Bytestream:
+class ByteStream:
     def __init__(self, data: Union[int, bytes, bytearray, None] = None, byteorder='little'):
         if data is None:
             self.data = bytearray()
@@ -35,7 +35,7 @@ class Bytestream:
         self.offset = self.count
         return self.offset
 
-    def ensure_space(size: int):
+    def ensure_space(self, size: int):
         if self.offset + size <= self.capacity:
             return
         capacity = self.capacity
@@ -45,72 +45,75 @@ class Bytestream:
         resized_data[:len(self.data)] = self.data
         self.data = resized_data
 
-    def put_bytes(value: bytes):
+    def put_bytes(self, value: bytes):
         self.ensure_space(len(value))
         self.data[self.offset : self.offset + len(value)] = value
         self.offset += len(value)
         self.count = max(self.count, self.offset)
 
-    def put_uint64(value: int):
+    def put_uint64(self, value: int):
         self.put_bytes(value.to_bytes(8, self.byteorder, signed=False))
 
-    def put_uint32(value: int)
+    def put_uint32(self, value: int):
         self.put_bytes(value.to_bytes(4, self.byteorder, signed=False))
 
-    def put_uint16(value: int)
+    def put_uint16(self, value: int):
         self.put_bytes(value.to_bytes(2, self.byteorder, signed=False))
 
-    def put_byte(value: int)
+    def put_byte(self, value: int):
         self.put_bytes(value.to_bytes(1, self.byteorder, signed=False))
 
-    def put_int64(value: int):
+    def put_int64(self, value: int):
         self.put_bytes(value.to_bytes(8, self.byteorder, signed=True))
 
-    def put_int32(value: int)
+    def put_int32(self, value: int):
         self.put_bytes(value.to_bytes(4, self.byteorder, signed=True))
 
-    def put_int16(value: int)
+    def put_int16(self, value: int):
         self.put_bytes(value.to_bytes(2, self.byteorder, signed=True))
 
-    def put_signed_byte(value: int)
+    def put_signed_byte(self, value: int):
         self.put_bytes(value.to_bytes(1, self.byteorder, signed=True))
 
-    def put_string(value: Union[str, bytes]):
+    def put_string(self, value: Union[str, bytes]):
         if isinstance(value, str):
             value = value.encode('utf-8')
         self.put_uint16(len(value))
         self.put_bytes(value)
 
-    def get_bytes(size: int) -> bytes:
+    def get_bytes(self, size: int) -> bytes:
         self.ensure_space(size)
         value = bytes(self.data[self.offset : self.offset + size])
         self.offset += size
         self.count = max(self.count, self.offset)
         return value
 
-    def get_uint64() -> int:
+    def get_uint64(self) -> int:
         return int.from_bytes(self.get_bytes(8), self.byteorder, signed=False)
 
-    def get_uint32() -> int:
+    def get_uint32(self) -> int:
         return int.from_bytes(self.get_bytes(4), self.byteorder, signed=False)
 
-    def get_uint16() -> int:
+    def get_uint16(self) -> int:
         return int.from_bytes(self.get_bytes(2), self.byteorder, signed=False)
 
-    def get_byte() -> int:
+    def get_byte(self) -> int:
         return int.from_bytes(self.get_bytes(1), self.byteorder, signed=False)
 
-    def get_int64() -> int:
+    def get_int64(self) -> int:
         return int.from_bytes(self.get_bytes(8), self.byteorder, signed=True)
 
-    def get_int32() -> int:
+    def get_int32(self) -> int:
         return int.from_bytes(self.get_bytes(4), self.byteorder, signed=True)
 
-    def get_int16() -> int:
+    def get_int16(self) -> int:
         return int.from_bytes(self.get_bytes(2), self.byteorder, signed=True)
 
-    def get_signed_byte() -> int:
+    def get_signed_byte(self) -> int:
         return int.from_bytes(self.get_bytes(1), self.byteorder, signed=True)
 
-    def get_string() -> str:
+    def get_string(self) -> str:
         return self.get_bytes(self.get_uint16()).decode('utf-8')
+
+    def to_bytes(self) -> bytes:
+        return bytes(self.data)
