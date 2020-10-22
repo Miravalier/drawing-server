@@ -13,31 +13,47 @@ clients = {}
 
 async def main():
     print(sys.version)
-    await asyncio.start_server(connection_callback, "0.0.0.0", 1000)
+    print("Info: Server starting up.")
+    server = await asyncio.start_server(connection_callback, "0.0.0.0", 1000)
+    await server.serve_forever()
+    print("Info: Server shut down.")
 
 
+def repeat(coro):
+    async def wrapper(*args, **kwargs):
+        try:
+            while True:
+                await coro()
+        except:
+            pass
+    return wrapper
+
+
+@repeat
 async def client_handler(client: Client):
-    while True:
-        packet_type, stream = await client.receive()
-        if packet_type == SET_LITTLE_ENDIAN:
-            client.byteorder = 'little'
-        elif packet_type == SET_BIG_ENDIAN:
-            client.byteorder = 'big'
-        elif packet_type == KEEPALIVE:
-            pass
-        elif packet_type == DISCONNECT:
-            client.disconnect()
-        elif packet_type == CREATE_LOBBY:
-            pass
-        elif packet_type == SET_NAME:
-            client.name = stream.get_string()
-            print("Client {} renamed to {}".format(client.id, client.name))
+    packet_type, stream = await client.receive()
+    if packet_type == SET_LITTLE_ENDIAN:
+        client.byteorder = 'little'
+    elif packet_type == SET_BIG_ENDIAN:
+        client.byteorder = 'big'
+    elif packet_type == KEEPALIVE:
+        pass
+    elif packet_type == DISCONNECT:
+        client.disconnect()
+    elif packet_type == CREATE_LOBBY:
+        pass
+    elif packet_type == SET_NAME:
+        client.name = stream.get_string()
+        print("Client {} renamed to {}".format(client.id, client.name))
 
 
 async def connection_callback(reader: StreamReader, writer: StreamWriter):
     # Read the type and id from the connection
-    client_type = int.from_bytes(await reader.readexactly(1))
-    client_id = int.from_bytes(await reader.readexactly(16), 'big')
+    try:
+        client_type = int.from_bytes(await reader.readexactly(1), 'big')
+        client_id = int.from_bytes(await reader.readexactly(16), 'big')
+    except EOFError:
+        return
 
     # Get the client object if it exists
     if client_id in clients:
