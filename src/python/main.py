@@ -13,6 +13,9 @@ FULLCHAIN_PATH = Path('/etc/letsencrypt/live/miramontes.dev/fullchain.pem')
 PRIVKEY_PATH = Path('/etc/letsencrypt/live/miramontes.dev/privkey.pem')
 
 
+connected_sockets = set()
+
+
 async def main(websocket, path):
     while True:
         request = await websocket.recv()
@@ -45,5 +48,5 @@ def bootstrap():
 if __name__ == '__main__':
     try:
         bootstrap()
-    except FatalException:
-        pass
+    except FatalException as e:
+        error(e, end="")

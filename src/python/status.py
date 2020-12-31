@@ -18,6 +18,5 @@ def info(*args, **kwargs):
     print("\x1B[0m[.]\x1B[0m", *args, **kwargs)
 
 
-def fatal(*args, **kwargs):
-    error(*args, **kwargs)
-    raise FatalException()
+def fatal(*args, sep=" ", end="\n"):
+    raise FatalException(sep.join(args) + end)
