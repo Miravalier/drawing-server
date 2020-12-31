@@ -3,18 +3,27 @@
     <head>
         <title>Drawing Game</title>
         <link rel="preconnect" href="https://fonts.gstatic.com">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shadows+Into+Light">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shadows+Into+Light&family=Raleway">
         <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
         <script type="module" src="/draw-resources/main.js"></script>
         <script type="module" src="/draw-resources/connection.js"></script>
         <link rel="stylesheet" type="text/css" href="/draw-resources/draw.css"></link>
         <link rel="shortcut icon" href="/draw-resources/rainbow-pen-outline.ico"></link>
+        <meta name="viewport" content="width=device-width">
     </head>
     <body>
-        <div id="page">
+        <div id="background">
+            <div class="pane"></div>
+            <div class="tiles"></div>
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div id="ui">
             <img id="logo" src="/draw-resources/rainbow-pen.svg"
-                alt="Rainbow Pen" width="256" height="256">
+                alt="Rainbow Pen" width="50%" height="50%">
             <p class="loading-text handwriting">Loading...</p>
+            <p>Lorem ipsum dolor sit amet.</p>
         </div>
     </body>
 </html>
