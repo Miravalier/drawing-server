@@ -7,6 +7,21 @@ let canvas = null;
 let context = null;
 let penDown = false;
 let pathLength = 0;
+let penColor = "#000000";
+let penSize = 3;
+let canvasColor = "#c8c8c8";
+
+
+export function fill(color)
+{
+    if (!color) color = canvasColor;
+    canvasColor = color;
+
+    const oldFillStyle = context.fillStyle;
+    context.fillStyle = color;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = oldFillStyle;
+}
 
 
 export function clear()
@@ -30,9 +45,9 @@ export function activate()
 
     // Attach listeners
     canvas.addEventListener("mousemove", onDraw);
-    canvas.addEventListener("mousedown", onPenDown);
-    canvas.addEventListener("mouseup", onPenUp);
     window.addEventListener("resize", onResize)
+
+    // Create UI controls
 }
 
 
@@ -40,8 +55,6 @@ export function deactivate()
 {
     if (context) {
         canvas.removeEventListener("mousemove", onDraw);
-        canvas.removeEventListener("mousedown", onPenDown);
-        canvas.removeEventListener("mouseup", onPenUp);
         window.removeEventListener("resize", onResize)
         clear();
     }
@@ -58,15 +71,15 @@ export function save()
 
 function onPenDown(ev)
 {
-    console.log("Pen Down");
+    if (penDown) return;
 
     let x = ev.clientX - container.offsetLeft;
     let y = ev.clientY - container.offsetTop;
 
     context.beginPath();
     context.moveTo(x, y);
-    context.strokeStyle = "orange";
-    context.lineWidth = 5;
+    context.strokeStyle = penColor;
+    context.lineWidth = penSize;
 
     penDown = true;
 }
@@ -76,11 +89,7 @@ function onPenUp(ev)
 {
     if (!penDown) return;
 
-    console.log("Pen Up");
     penDown = false;
-
-    onDraw(ev);
-
     context.closePath();
     pathLength = 0;
 }
@@ -88,6 +97,8 @@ function onPenUp(ev)
 
 function onDraw(ev)
 {
+    if (ev.buttons) onPenDown(ev);
+    if (!ev.buttons) onPenUp(ev);
     if (!penDown) return;
 
     let x = ev.clientX - container.offsetLeft;
@@ -109,4 +120,5 @@ function onResize()
 {
     canvas.width = canvas.parentElement.clientWidth;
     canvas.height = canvas.parentElement.clientHeight;
+    fill();
 }

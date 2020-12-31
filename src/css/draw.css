@@ -27,24 +27,31 @@ html, body {
 #background .tiles {
     position: absolute;
     inset: 0;
+    background-image: url("pen.svg");
+    background-repeat: repeat;
+    background-size: 32px 32px;
+    opacity: 0.1;
 }
 
-#ui, #canvas-container {
-    position: absolute;
-    inset: 8px 8px 48px 8px;
+#load-screen {
+    opacity: 0;
+    transition: 1s opacity;
     display: flex;
     flex-flow: column nowrap;
     justify-content: center;
     align-items: center;
     border-radius: 16px;
-}
 
-#ui {
+    position: absolute;
+    inset: 8%;
+    background: #c8c8c8;
     pointer-events: none;
 }
 
 #canvas-container {
-    background: rgb(200, 200, 200);
+    border-radius: 16px;
+    position: absolute;
+    inset: 8px 8px 48px 8px;
 }
 
 #logo {
@@ -62,5 +69,6 @@ html, body {
 }
 
 #canvas {
+    opacity: 0;
     border-radius: 16px;
 }
