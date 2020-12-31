@@ -11,6 +11,11 @@ function error() {
     echo -e "[\x1b[31merror\x1b[0m] $@"
 }
 
+# Update certs
+sudo cp /etc/letsencrypt/live/miramontes.dev/fullchain.pem ./secrets
+sudo cp /etc/letsencrypt/live/miramontes.dev/privkey.pem ./secrets
+sudo chown -R $USER:$USER ./secrets
+
 # Make sure the containers are not running.
 if [[ $(docker-compose ps | wc -l) -gt 2 ]]; then
     info "Containers are running. Bringing them down."
@@ -45,4 +50,8 @@ sleep 1
 docker-compose ps
 docker-compose logs --timestamps --tail=32
 
+# Re deploy web app to miramontes.dev
+./deploy.sh
+
+# Return success
 exit 0
