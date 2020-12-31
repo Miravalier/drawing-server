@@ -1,6 +1,6 @@
 #!/bin/bash
 function debug() {
-    echo -e "[\x1b[33mdebug\x1b[0m] $@"
+    echo -e "[\x1b[95mdebug\x1b[0m] $@"
 }
 
 function info() {
@@ -27,7 +27,7 @@ fi
 info "Building images."
 docker-compose build
 if [[ $? != 0 ]]; then
-    error "Failed to build image."
+    error "Failed to build images."
     exit 1
 fi
 
@@ -35,7 +35,7 @@ fi
 info "Bringing containers up."
 docker-compose up -d
 if [[ $? != 0 ]]; then
-    error "Failed to bring container up."
+    error "Failed to bring containers up."
     exit 1
 fi
 
