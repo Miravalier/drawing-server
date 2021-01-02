@@ -3,9 +3,12 @@ import asyncio
 import json
 import ssl
 import websockets
+import signal
+from dataclasses import dataclass
 from status import *
 from pathlib import Path
 from handlers import request_handlers
+from typing import Any
 
 
 HOST = "0.0.0.0"
@@ -15,6 +18,46 @@ PRIVKEY_PATH = Path('/drawing-game/secrets/privkey.pem')
 
 
 connected_sockets = set()
+
+
+async def attempt_broadcast(websocket, message):
+    try:
+        await websocket.send(message)
+        return websocket, True
+    except:
+        return websocket, False
+
+
+@dataclass
+class RequestContext:
+    websocket: Any
+    requester: str
+    message: dict
+
+    async def broadcast(self, message, *, group=None):
+        if group is None:
+            group = connected_sockets
+        if not isinstance(message, str):
+            message = json.dumps(message)
+
+        results = await asyncio.gather(*(
+            attempt_broadcast(sock, message)
+            for sock in group if sock is not self.websocket
+        ))
+
+        successes = 0
+        for websocket, result in results:
+            if result:
+                successes += 1
+            else:
+                group.discard(websocket)
+        return successes
+
+    async def send(self, message):
+        if not isinstance(message, str):
+            message = json.dumps(message)
+        await self.websocket.send(message)
+
 
 
 async def wrap_main(websocket, path):
@@ -28,9 +71,38 @@ async def wrap_main(websocket, path):
 
 async def main(websocket, path):
     connected_sockets.add(websocket)
+
+    # Get "connect" request
+    event = await websocket.recv()
+
+    if not isinstance(event, str):
+        error("Malformed client handshake: not string")
+        return
+
+    try:
+        message = json.loads(event)
+    except json.JSONDecodeError:
+        error("Malformed client handshake: not JSON")
+        return
+
+    if message.get('type', None) != "connect":
+        error("Malformed client handshake: no connect request")
+        return
+
+    token = message.get('id', None)
+    if not token:
+        error("Malformed client handshake: no connect id")
+        return
+
+    info("Received connection from", token)
+    await websocket.send('{"type": "connected"}')
+
+    # Receive requests
     while True:
         # Receive a request
         event = await websocket.recv()
+
+        # Validate the request
         if isinstance(event, str):
             try:
                 message = json.loads(event)
@@ -44,15 +116,17 @@ async def main(websocket, path):
             error("Unknown frame type '{}' from websocket.recv()".format(type(frame)))
             continue
 
-        # Validate the request
         if 'type' not in message:
-            error("Malformed message missing a type")
+            error("Malformed message: missing a type")
             continue
 
         # Call the appropriate handler
         if message['type'] in request_handlers:
             try:
-                reply = request_handlers[message['type']](websocket, message)
+                context = RequestContext(websocket, token, message)
+                validate, handler = request_handlers[message['type']]
+                validate(message)
+                reply = await handler(context)
             except Exception as e:
                 reply = "{}: {}".format(type(e).__name__, str(e))
                 error(reply)
@@ -81,22 +155,29 @@ def start_server():
     info("Starting server ...")
     loop = asyncio.get_event_loop()
 
+    # Set up SIGTERM handler
+    for s in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(s, lambda: loop.stop())
+
+    # Load SSL certs
     try:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(FULLCHAIN_PATH, keyfile=PRIVKEY_PATH)
     except PermissionError:
         fatal("Could not load {} or {}".format(FULLCHAIN_PATH, PRIVKEY_PATH))
 
+    # Prepare server
     server_task = websockets.serve(wrap_main, HOST, PORT, ssl=ssl_context)
-
     loop.run_until_complete(server_task)
-    success("Server ready");
+    success("Server ready")
 
+    # Wait until a SIGTERM is received or CTRL+C is pressed
     try:
         loop.run_forever()
     except KeyboardInterrupt:
         print()
-        success("Server shutdown")
+
+    success("Server shutdown")
 
 
 if __name__ == '__main__':

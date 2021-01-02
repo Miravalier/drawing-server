@@ -50,8 +50,5 @@ sleep 1
 docker-compose ps
 docker-compose logs --timestamps --tail=32
 
-# Re deploy web app to miramontes.dev
-./deploy.sh
-
 # Return success
 exit 0

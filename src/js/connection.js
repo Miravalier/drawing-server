@@ -1,7 +1,9 @@
 // Globals
+let g_id = null;
 let g_connection = null;
 let g_connection_delay = 500;
 const g_message_handlers = {};
+const g_active_requests = {};
 
 // Public Functions
 export function on(type, handler)
@@ -53,6 +55,17 @@ export function off(type, handler)
 
 export function connect()
 {
+    // Get id from localstorage
+    if (g_id === null)
+    {
+        g_id = localStorage.getItem("id");
+        // Put id into localstorage if there isn't one
+        if (g_id === null)
+        {
+            g_id = utils.token(16);
+            localStorage.setItem("id", g_id);
+        }
+    }
     g_connection = new WebSocket("wss://miramontes.dev:14501");
     g_connection.onopen = on_connect;
     g_connection.onmessage = on_message;
@@ -68,7 +81,7 @@ export function send(message)
 export function request(message)
 {
     // Ensure request ID
-    if (!message.requestId) message.requestId = Math.floor(Math.random() * 4294967294) + 1;
+    if (!message.requestId) message.requestId = utils.randInt();
 
     // Add request to the active requests and send the message
     return new Promise(resolve => {
@@ -78,7 +91,7 @@ export function request(message)
 }
 
 // Handlers
-function dispatch(message)
+export function dispatch(message)
 {
     if (message.requestId)
     {
@@ -116,7 +129,7 @@ function dispatch(message)
 
 async function on_connect()
 {
-    send({type: "connect"});
+    send({type: "connect", id: g_id});
 }
 
 async function on_message(event)

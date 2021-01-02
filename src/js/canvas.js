@@ -1,4 +1,5 @@
 import * as ui from "./ui.js";
+import * as utils from "./utils.js";
 
 const saveFormat = "image/webp";
 const saveQuality = 0.5;
@@ -32,6 +33,15 @@ export function init()
     });
 
     async function onControlClicked(ev) {
+        const control = $(ev.currentTarget);
+
+        // If the clear button is clicked
+        if (control.data("tool") == "clear")
+        {
+            drawCanvas();
+            return;
+        }
+
         // Trigger a mouse up event
         onMouseUp();
 
@@ -44,7 +54,6 @@ export function init()
         }
 
         // If the active control is clicked, set inactive
-        const control = $(ev.currentTarget);
         if (activeControl && control.data("tool") == activeControl.data("tool"))
         {
             activeControl.removeClass("active");
@@ -79,7 +88,7 @@ export function init()
 }
 
 
-export function fill(color)
+export function drawCanvas(color)
 {
     if (!color) color = canvasColor;
     canvasColor = color;
@@ -107,6 +116,8 @@ export function activate()
     canvasColor = "#c8c8c8";
     penColor = "#000000";
     penSize = 3;
+    $("#settings .color").val(penColor);
+    $("#settings .size").val(penSize);
 
     // Set canvas dimensions
     onResize();
@@ -281,7 +292,7 @@ function onFillStart(originX, originY)
     const pixels = new Uint32Array(imageData.data.buffer);
 
     // Get colors
-    const fillColor = swap32(parseInt(penColor.substring(1) + "FF", 16));
+    const fillColor = utils.swap32(parseInt(penColor.substring(1) + "FF", 16));
     const targetColor = pixels[originY * canvas.width + originX];
 
     // Make sure colors are different
@@ -337,7 +348,7 @@ function onDropperStart(x, y)
     const pixels = new Uint32Array(imageData.data.buffer);
 
     // Get color under cursor
-    let targetColor = swap32(pixels[y * canvas.width + x]);
+    let targetColor = utils.swap32(pixels[y * canvas.width + x]);
     targetColor = targetColor.toString(16).padStart(8, '0');
 
     // Set pen color
@@ -378,8 +389,7 @@ function onResize()
 {
     canvas.width = canvas.parentElement.clientWidth - 16;
     canvas.height = canvas.parentElement.clientHeight - 56;
-    fill();
-    
+    drawCanvas();
 }
 
 
@@ -388,19 +398,4 @@ function colorDifference(a, b)
     return  (Math.abs((a & 0x00FF0000) - (b & 0x00FF0000)) >> 16) +
             (Math.abs((a & 0x0000FF00) - (b & 0x0000FF00)) >> 8) +
             Math.abs((a & 0x000000FF) - (b & 0x000000FF));
-}
-
-
-const swapBuffer = new ArrayBuffer(4);
-const swapView = new DataView(swapBuffer);
-export function swap32(value)
-{
-    swapView.setUint32(0, value, true);
-    return swapView.getUint32(0, false);
-}
-
-
-export function hex(value)
-{
-    return "0x" + value.toString(16).padStart(8, "0");
 }
