@@ -9,18 +9,28 @@ async function main()
     window.connection = connection;
     window.canvas = canvas;
 
-    // Prepare handlers
+    // Prevent right click and mousedown events
+    $("body").contextmenu(ev => ev.preventDefault())
+    $("#background, #canvas-screen, #load-screen").on(
+        "mousedown",
+        ev => ev.preventDefault()
+    );
+
+    // Initialize components
+    canvas.init()
+
+    // Prepare network reply handlers
     connection.on("success", () => {});
     connection.on("connected", async () => {
         console.log("Connection to server established");
-        await ui.fadeOut("#load-screen");
+        await ui.fadeOut("#load-screen", 500);
         canvas.activate();
-        await ui.fadeIn("#canvas");
+        await ui.fadeIn("#canvas-screen", 500);
     });
 
     // Connect to server
     console.log("Initializing drawing game.");
-    await ui.fadeIn("#load-screen");
+    await ui.fadeIn("#load-screen", 500);
     connection.connect();
 }
 

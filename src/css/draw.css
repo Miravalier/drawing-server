@@ -1,6 +1,22 @@
 * {
     font-family: 'Raleway', sans-serif;
-    font-size: 3vw;
+}
+
+a {
+    color: white;
+    filter: drop-shadow(2px 2px 0px black);
+    cursor: url("pointer.svg"), pointer;
+}
+
+a:hover {
+    filter: drop-shadow(2px 2px 0px black)
+            drop-shadow(0px 0px 3px #0080ff);
+}
+
+a.active {
+    color: #0080ff;
+    filter: drop-shadow(2px 2px 0px black)
+            drop-shadow(0px 0px 3px #0080ff);
 }
 
 p {
@@ -11,6 +27,7 @@ html, body {
     margin: 0;
     height: 100%;
     width: 100%;
+    cursor: url("cursor.svg"), auto;
 }
 
 #background {
@@ -27,15 +44,14 @@ html, body {
 #background .tiles {
     position: absolute;
     inset: 0;
-    background-image: url("pen.svg");
+    background-image: url("pen-nib.svg");
     background-repeat: repeat;
     background-size: 32px 32px;
-    opacity: 0.1;
+    opacity: 0.05;
 }
 
 #load-screen {
     opacity: 0;
-    transition: 1s opacity;
     display: flex;
     flex-flow: column nowrap;
     justify-content: center;
@@ -44,14 +60,19 @@ html, body {
 
     position: absolute;
     inset: 8%;
-    background: #c8c8c8;
     pointer-events: none;
 }
 
-#canvas-container {
-    border-radius: 16px;
+#load-screen p {
+    color: white;
+    size: 16px;
+}
+
+#canvas-screen {
+    opacity: 0;
+    display: flex;
     position: absolute;
-    inset: 8px 8px 48px 8px;
+    inset: 0;
 }
 
 #logo {
@@ -68,7 +89,91 @@ html, body {
     font-size: 4vw;
 }
 
-#canvas {
+#canvas-screen canvas {
+    border-radius: 8px;
+    position: absolute;
+    inset: 8px 8px 48px 8px;
+}
+
+canvas.pen {
+    cursor: url("pen.svg") 0 24, auto;
+}
+
+canvas.eraser {
+    cursor: url("pen-flipped.svg") 0 24, auto;
+}
+
+canvas.fill {
+    cursor: url("fill.svg") 0 0, auto;
+}
+
+canvas.dropper {
+    cursor: url("dropper.svg") 0 24, auto;
+}
+
+#canvas-screen .controls {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: 36px;
+    border-radius: 8px;
+
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+#canvas-screen .controls a i {
+    font-size: 28px;
+}
+
+#settings {
+    display: none;
     opacity: 0;
-    border-radius: 16px;
+
+    height: 112px;
+    width: 160px;
+    position: absolute;
+    top: calc(50% - 56px);
+    left: calc(50% - 80px);
+
+    background: white;
+    border: 1px solid #808080;
+    border-radius: 8px;
+    box-shadow: 2px 2px 2px 0 black;
+
+    flex-flow: column nowrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#settings .title {
+    user-select: none;
+    font-size: 24px;
+    margin: 4px;
+    flex: 0 0 24px;
+}
+
+#settings .row {
+    flex: 1;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+#settings .row .label {
+    user-select: none;
+    margin: 4px;
+}
+
+#settings .row input {
+    margin: 4px;
+    width: 36px;
+}
+
+#settings .row input.size {
+    padding-bottom: 4px;
 }

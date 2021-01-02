@@ -14,5 +14,4 @@ def register(message_type):
 
 @register("connect")
 def on_connect(websocket, message):
-    info("Client connected", websocket)
     return {"type": "connected"}
