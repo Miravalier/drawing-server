@@ -1,15 +1,16 @@
 // Globals
 let g_token = null;
 let g_connection = null;
-let g_connection_delay = 2500;
+const g_connection_delay = 2500;
 const g_request_timeout = 15000;
+const g_timeout_poll_rate = 3000;
 const g_message_handlers = {};
 const g_waiting_messages = {};
 
 // Public Functions
 export function init()
 {
-    // Every 5 seconds, go through and timeout abandoned requests
+    // Go through and timeout abandoned requests
     setInterval(() => {
         const currentTime = Date.now();
         const timeouts = [];
@@ -25,7 +26,7 @@ export function init()
             delete g_waiting_messages[id];
             resolve(Promise.reject(new Error("request timed out")));
         }
-    }, 5000);
+    }, g_timeout_poll_rate);
 }
 
 
@@ -102,14 +103,11 @@ export async function send(message)
     // Ensure request ID
     if (!message.id) message.id = utils.randInt();
 
-    // Convert to string
-    message = JSON.stringify(message);
-
     // Add request to the active requests and send the message
     return new Promise(resolve => {
         const timeout = Date.now() + g_request_timeout;
         g_waiting_messages[message.id] = [message, resolve, timeout];
-        g_connection.send(message);
+        g_connection.send(JSON.stringify(message));
     });
 }
 
@@ -117,11 +115,11 @@ export async function send(message)
 // Handlers
 export function dispatch(message)
 {
-    if (message.type == "error")
+    if (message.type === "error")
     {
         console.error("[Server-Error]", message.data);
     }
-    else if (message.type == "debug")
+    else if (message.type === "debug")
     {
         console.warn("[Server-Debug]", message.data);
     }
@@ -142,10 +140,10 @@ export function dispatch(message)
 
 async function on_connect()
 {
-    g_connection.send(json.dumps({type: "connect", token: g_token}));
+    g_connection.send(JSON.stringify({type: "connect", token: g_token}));
     for (let [message, resolve, timeout] of Object.values(g_waiting_messages))
     {
-        g_connection.send(message);
+        g_connection.send(JSON.stringify(message));
     }
 }
 
@@ -186,6 +184,7 @@ async function on_message(event)
 
 async function on_error()
 {
+    console.log("Connection to server lost. Reconnecting ...");
     // Close connection
     g_connection.onopen = undefined;
     g_connection.onmessage = undefined;

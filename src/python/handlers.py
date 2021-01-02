@@ -47,7 +47,8 @@ def register(message_type, arguments=None):
 
 
 @register("ping")
-async def on_debug(ctx):
+async def on_ping(ctx):
+    info("Received ping:", ctx.message, "from", ctx.requester);
     ctx.message["type"] = "pong"
     return ctx.message
 

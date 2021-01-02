@@ -48,7 +48,8 @@ async function main()
     });
 
     // Initialize components
-    canvas.init()
+    connection.init();
+    canvas.init();
 
     // Prepare network reply handlers
     connection.on("success", () => {});
@@ -56,6 +57,9 @@ async function main()
         console.log("Connection to server established");
         await ui.fadeOut("#main-menu #loading-text", 500);
         await ui.fadeIn("#main-menu .controls", 500);
+        connection.on("connected", message => {
+            console.log("Connection re-established.");
+        });
     });
     connection.on("drawingPrompt", async message => {
         await ui.fadeOut("#main-menu", 500);
