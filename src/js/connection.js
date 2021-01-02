@@ -1,11 +1,34 @@
 // Globals
-let g_id = null;
+let g_token = null;
 let g_connection = null;
-let g_connection_delay = 500;
+let g_connection_delay = 2500;
+const g_request_timeout = 15000;
 const g_message_handlers = {};
-const g_active_requests = {};
+const g_waiting_messages = {};
 
 // Public Functions
+export function init()
+{
+    // Every 5 seconds, go through and timeout abandoned requests
+    setInterval(() => {
+        const currentTime = Date.now();
+        const timeouts = [];
+        for (let [message, resolve, timeout] of Object.values(g_waiting_messages))
+        {
+            if (currentTime > timeout)
+            {
+                timeouts.push([message.id, resolve]);
+            }
+        }
+        for (let [id, resolve] of timeouts)
+        {
+            delete g_waiting_messages[id];
+            resolve(Promise.reject(new Error("request timed out")));
+        }
+    }, 5000);
+}
+
+
 export function on(type, handler)
 {
     // Get handlers array
@@ -56,14 +79,14 @@ export function off(type, handler)
 export function connect()
 {
     // Get id from localstorage
-    if (g_id === null)
+    if (g_token === null)
     {
-        g_id = localStorage.getItem("id");
+        g_token = localStorage.getItem("token");
         // Put id into localstorage if there isn't one
-        if (g_id === null)
+        if (g_token === null)
         {
-            g_id = utils.token(16);
-            localStorage.setItem("id", g_id);
+            g_token = utils.token(16);
+            localStorage.setItem("token", g_token);
         }
     }
     g_connection = new WebSocket("wss://miramontes.dev:14501");
@@ -73,40 +96,27 @@ export function connect()
     g_connection.onclose = on_error;
 }
 
-export function send(message)
-{
-    g_connection.send(JSON.stringify(message));
-}
 
-export function request(message)
+export async function send(message)
 {
     // Ensure request ID
-    if (!message.requestId) message.requestId = utils.randInt();
+    if (!message.id) message.id = utils.randInt();
+
+    // Convert to string
+    message = JSON.stringify(message);
 
     // Add request to the active requests and send the message
     return new Promise(resolve => {
-        g_active_requests[message.requestId] = resolve;
-        send(message);
+        const timeout = Date.now() + g_request_timeout;
+        g_waiting_messages[message.id] = [message, resolve, timeout];
+        g_connection.send(message);
     });
 }
+
 
 // Handlers
 export function dispatch(message)
 {
-    if (message.requestId)
-    {
-        const callback = g_active_requests[message.requestId];
-        if (callback)
-        {
-            callback(message);
-        }
-        else
-        {
-            console.error("Ignored request", message);
-        }
-        return;
-    }
-
     if (message.type == "error")
     {
         console.error("[Server-Error]", message.data);
@@ -121,15 +131,22 @@ export function dispatch(message)
             message_handler(message);
         }
     }
-    else
+
+    if (message.id in g_waiting_messages)
     {
-        console.error("Unhandled message", message);
+        const [request, resolve, timeout] = g_waiting_messages[message.id];
+        resolve(message);
+        delete g_waiting_messages[message.id];
     }
 }
 
 async function on_connect()
 {
-    send({type: "connect", id: g_id});
+    g_connection.send(json.dumps({type: "connect", token: g_token}));
+    for (let [message, resolve, timeout] of Object.values(g_waiting_messages))
+    {
+        g_connection.send(message);
+    }
 }
 
 async function on_message(event)

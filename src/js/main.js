@@ -24,7 +24,7 @@ async function main()
 
     $("#create-game-menu .accept").click(async ev => {
         await ui.fadeOut("#create-game-menu", 250);
-        await connection.request({
+        await connection.send({
             "type": "createLobby",
             "name": $("#create-game-menu .name").val(),
             "public": $("#create-game-menu .public").prop("checked"),

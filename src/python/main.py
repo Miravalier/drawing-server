@@ -89,9 +89,9 @@ async def main(websocket, path):
         error("Malformed client handshake: no connect request")
         return
 
-    token = message.get('id', None)
+    token = message.get('token', None)
     if not token:
-        error("Malformed client handshake: no connect id")
+        error("Malformed client handshake: no connect token")
         return
 
     info("Received connection from", token)
@@ -143,9 +143,9 @@ async def main(websocket, path):
             reply = {"type": "error", "data": reply}
 
         # Make sure request id is preserved
-        request_id = message.get('requestId', None)
+        request_id = message.get('id', None)
         if request_id:
-            reply['requestId'] = request_id
+            reply['id'] = request_id
 
         # Serialize and send the reply
         await websocket.send(json.dumps(reply))
