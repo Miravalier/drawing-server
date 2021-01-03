@@ -13,7 +13,6 @@ from typing import Any
 
 
 HOST = "0.0.0.0"
-PORT = 80
 FULLCHAIN_PATH = Path('/drawing-game/secrets/fullchain.pem')
 PRIVKEY_PATH = Path('/drawing-game/secrets/privkey.pem')
 
@@ -154,6 +153,7 @@ async def main(websocket, path):
 
 def start_server():
     WS_UNSECURE = os.environ.get('WS_UNSECURE') == "true"
+    PORT = int(os.environ.get('CONTAINER_PORT'))
 
     info("Starting server ...")
     loop = asyncio.get_event_loop()

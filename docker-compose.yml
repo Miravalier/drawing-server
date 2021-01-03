@@ -6,4 +6,4 @@ services:
     build: .
     container_name: drawing-server
     ports:
-      - "${WSS_PORT}:80"
+      - "${WSS_PORT}:${CONTAINER_PORT}"
