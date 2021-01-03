@@ -14,11 +14,11 @@ function error() {
     echo -e "[\x1b[31merror\x1b[0m] $@"
 }
 
-function check-status()
+function error-check()
 {
-    if [[ $1 != 0 ]]; then
-        if [[ -n $2 ]]; then
-            local MSG=$2
+    if [[ $? != 0 ]]; then
+        if [[ -n $1 ]]; then
+            local MSG=$1
         else
             local MSG='Build failed.'
         fi

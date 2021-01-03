@@ -1,7 +1,7 @@
 #!/bin/bash
 
-. config.sh
 . utils.sh
+
 DOCKER_FLAGS='--env-file config.sh'
 
 # Update certs
@@ -14,10 +14,7 @@ sudo chown -R $USER:$USER secrets
 if [[ $(docker-compose $DOCKER_FLAGS ps | wc -l) -gt 2 ]]; then
     info "Containers are running. Bringing them down."
     docker-compose $DOCKER_FLAGS down
-    if [[ $? != 0 ]]; then
-        error "Failed to bring containers down."
-        exit 1
-    fi
+    error-check "Failed to bring containers down."
 else
     info "Containers are not running."
 fi
@@ -25,18 +22,12 @@ fi
 # Build the images.
 info "Building images."
 docker-compose $DOCKER_FLAGS build
-if [[ $? != 0 ]]; then
-    error "Failed to build images."
-    exit 1
-fi
+error-check "Failed to build images."
 
 # Bring the containers up.
 info "Bringing containers up."
 docker-compose $DOCKER_FLAGS up -d
-if [[ $? != 0 ]]; then
-    error "Failed to bring containers up."
-    exit 1
-fi
+error-check "Failed to bring containers up."
 
 # Check if any immediately went into 'Exit' state and print their logs.
 info "Displaying 'docker-compose ps'"

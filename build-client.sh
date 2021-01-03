@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. config.sh
 . utils.sh
 
 sudo mkdir -p "$HTML_ROOT/draw-resources"
