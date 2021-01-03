@@ -1,25 +1,19 @@
 #!/bin/bash
-function debug() {
-    echo -e "[\x1b[95mdebug\x1b[0m] $@"
-}
 
-function info() {
-    echo -e "[\x1b[32minfo\x1b[0m] $@"
-}
-
-function error() {
-    echo -e "[\x1b[31merror\x1b[0m] $@"
-}
+. config.sh
+. utils.sh
+DOCKER_FLAGS='--env-file config.sh'
 
 # Update certs
-sudo cp /etc/letsencrypt/live/miramontes.dev/fullchain.pem ./secrets
-sudo cp /etc/letsencrypt/live/miramontes.dev/privkey.pem ./secrets
-sudo chown -R $USER:$USER ./secrets
+mkdir -p secrets
+update $FULLCHAIN secrets/fullchain.pem
+update $PRIVKEY secrets/privkey.pem
+sudo chown -R $USER:$USER secrets
 
 # Make sure the containers are not running.
-if [[ $(docker-compose ps | wc -l) -gt 2 ]]; then
+if [[ $(docker-compose $DOCKER_FLAGS ps | wc -l) -gt 2 ]]; then
     info "Containers are running. Bringing them down."
-    docker-compose down
+    docker-compose $DOCKER_FLAGS down
     if [[ $? != 0 ]]; then
         error "Failed to bring containers down."
         exit 1
@@ -30,7 +24,7 @@ fi
 
 # Build the images.
 info "Building images."
-docker-compose build
+docker-compose $DOCKER_FLAGS build
 if [[ $? != 0 ]]; then
     error "Failed to build images."
     exit 1
@@ -38,7 +32,7 @@ fi
 
 # Bring the containers up.
 info "Bringing containers up."
-docker-compose up -d
+docker-compose $DOCKER_FLAGS up -d
 if [[ $? != 0 ]]; then
     error "Failed to bring containers up."
     exit 1
@@ -47,8 +41,8 @@ fi
 # Check if any immediately went into 'Exit' state and print their logs.
 info "Displaying 'docker-compose ps'"
 sleep 1
-docker-compose ps
-docker-compose logs --timestamps --tail=32
+docker-compose $DOCKER_FLAGS ps
+docker-compose $DOCKER_FLAGS logs --timestamps --tail=32
 
 # Return success
 exit 0

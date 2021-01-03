@@ -2,7 +2,8 @@ version: '2'
 
 services:
   server:
+    env_file: config.sh
     build: .
     container_name: drawing-server
     ports:
-      - "14501:14501"
+      - "${WSS_PORT}:80"

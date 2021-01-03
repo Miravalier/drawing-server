@@ -45,3 +45,9 @@ export async function fadeIn(selector, duration)
     // Remove opacity and transition
     $(selector).css({opacity: "", transition: ""});
 }
+
+
+export function error(message)
+{
+    console.error(message);
+}

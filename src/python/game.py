@@ -1,4 +1,6 @@
 import json
+import random
+import string
 from dataclasses import dataclass, fields
 
 
@@ -35,13 +37,16 @@ class Player:
 class Lobby:
     instances = {}
 
-    def __init__(self, owner, public, players=None):
+    def __init__(self, owner, public, players=None, join_code=None):
         if players is None:
             players = {}
+        if join_code is None:
+            join_code = "".join(random.choice(string.ascii_letters) for _ in range(8))
 
         self.owner = owner
         self.public = public
         self.players = players
+        self.join_code = join_code
 
     @property
     def data(self):

@@ -90,7 +90,7 @@ export function connect()
             localStorage.setItem("token", g_token);
         }
     }
-    g_connection = new WebSocket("wss://miramontes.dev:14501");
+    g_connection = new WebSocket(WSS_URL);
     g_connection.onopen = on_connect;
     g_connection.onmessage = on_message;
     g_connection.onerror = on_error;

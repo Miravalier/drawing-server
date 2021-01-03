@@ -62,6 +62,14 @@ async def on_create_lobby(ctx):
     # Create lobby
     lobby = Lobby.create(Player(ctx.requester, ctx.message['name']), ctx.message['public'])
 
+    reply = {
+        "type": "lobbyCreated",
+        "ownerName": lobby.owner.name,
+        "joinCode": lobby.join_code
+    }
+
     # Send broadcast
     if lobby.public:
-        await ctx.broadcast({"type": "lobbyCreated", "owner": lobby.owner.data})
+        await ctx.broadcast(reply);
+
+    return reply;

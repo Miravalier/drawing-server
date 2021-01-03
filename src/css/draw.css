@@ -217,6 +217,14 @@ canvas.dropper {
     align-items: center;
 }
 
+.field {
+    margin: 0px 4px;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: center;
+}
+
 .label {
     color: black;
     margin: 4px;
@@ -228,13 +236,13 @@ canvas.dropper {
     font-size: 24px;
 }
 
-#create-game-menu .row,
-#create-game-menu .title,
-#create-game-menu input {
+.modal .row,
+.modal .title,
+.modal input {
     margin: 4px;
 }
 
-#create-game-menu .button {
+.modal .button {
     font-size: 16px;
     padding: 2px 4px;
     margin: 4px 8px;
@@ -243,12 +251,26 @@ canvas.dropper {
     filter: drop-shadow(1px 1px 0px black);
 }
 
-#create-game-menu .button:hover {
+.modal .button:hover {
     filter: drop-shadow(1px 1px 0px black)
             drop-shadow(0px 0px 2px #0080ff);
 }
 
-#create-game-menu input[type="checkbox"] {
+.modal input[type="checkbox"] {
     height: 20px;
     width: 20px;
+}
+
+#game-lobby .join-code {
+    width: 92px;
+    text-align: center;
+}
+
+.field .value {
+    margin: 4px;
+}
+
+.field .label {
+    margin: 4px;
+    font-weight: bold;
 }

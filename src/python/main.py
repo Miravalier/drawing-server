@@ -12,7 +12,7 @@ from typing import Any
 
 
 HOST = "0.0.0.0"
-PORT = 14501
+PORT = 80
 FULLCHAIN_PATH = Path('/drawing-game/secrets/fullchain.pem')
 PRIVKEY_PATH = Path('/drawing-game/secrets/privkey.pem')
 

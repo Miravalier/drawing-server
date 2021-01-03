@@ -1,10 +1,10 @@
 # Domain and port for WSS
-DOMAIN=''
+DOMAIN='miramontes.dev'
 WSS_PORT=14501
 
 # HTML root for your webserver. The nginx default
 # on ubuntu is /var/www/html.
-HTML_ROOT='/var/www/html'
+HTML_ROOT='/var/www/miramontes'
 
 # Full cert chain for your domain
 FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
