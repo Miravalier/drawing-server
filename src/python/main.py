@@ -1,9 +1,10 @@
 #!/usr/bin/env python3.9
 import asyncio
 import json
+import os
 import ssl
-import websockets
 import signal
+import websockets
 from dataclasses import dataclass
 from status import *
 from pathlib import Path
@@ -152,6 +153,8 @@ async def main(websocket, path):
 
 
 def start_server():
+    WS_UNSECURE = os.environ.get('WS_UNSECURE') == "true"
+
     info("Starting server ...")
     loop = asyncio.get_event_loop()
 
@@ -159,15 +162,20 @@ def start_server():
     for s in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(s, lambda: loop.stop())
 
-    # Load SSL certs
-    try:
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(FULLCHAIN_PATH, keyfile=PRIVKEY_PATH)
-    except PermissionError:
-        fatal("Could not load {} or {}".format(FULLCHAIN_PATH, PRIVKEY_PATH))
+    if WS_UNSECURE:
+        # Start server with no SSL
+        server_task = websockets.serve(wrap_main, HOST, PORT)
+    else:
+        # Load SSL certs
+        try:
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_context.load_cert_chain(FULLCHAIN_PATH, keyfile=PRIVKEY_PATH)
+        except PermissionError:
+            fatal("Could not load {} or {}".format(FULLCHAIN_PATH, PRIVKEY_PATH))
 
-    # Prepare server
-    server_task = websockets.serve(wrap_main, HOST, PORT, ssl=ssl_context)
+        # Start server with SSL
+        server_task = websockets.serve(wrap_main, HOST, PORT, ssl=ssl_context)
+
     loop.run_until_complete(server_task)
     success("Server ready")
 

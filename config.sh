@@ -13,4 +13,5 @@ FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 PRIVKEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
 # Set to true if you want to disable WSS and fallback to WS
+# If this is true, FULLCHAIN and PRIVKEY are ignored.
 WS_UNSECURE=false

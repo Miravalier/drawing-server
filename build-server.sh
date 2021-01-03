@@ -5,10 +5,12 @@
 DOCKER_FLAGS='--env-file config.sh'
 
 # Update certs
-mkdir -p secrets
-update $FULLCHAIN secrets/fullchain.pem
-update $PRIVKEY secrets/privkey.pem
-sudo chown -R $USER:$USER secrets
+if [[ $WS_UNSECURE != "true" ]]; then
+    mkdir -p secrets
+    update $FULLCHAIN secrets/fullchain.pem
+    update $PRIVKEY secrets/privkey.pem
+    sudo chown -R $USER:$USER secrets
+fi
 
 # Make sure the containers are not running.
 if [[ $(docker-compose $DOCKER_FLAGS ps | wc -l) -gt 2 ]]; then

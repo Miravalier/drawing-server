@@ -60,7 +60,12 @@ function newer()
 
 CPP_FLAGS='-P -undef -Wundef -std=c99 -nostdinc -Wtrigraphs -fdollars-in-identifiers -C'
 CPP_FLAGS="$CPP_FLAGS -DDOMAIN=$DOMAIN -DWSS_PORT=$WSS_PORT"
-CPP_FLAGS="$CPP_FLAGS -DWSS_URL=\"wss://$DOMAIN:$WSS_PORT\""
+if [[ $WS_UNSECURE == "true" ]]; then
+    CPP_FLAGS="$CPP_FLAGS -DWSS_URL=\"ws://$DOMAIN:$WSS_PORT\""
+else
+    CPP_FLAGS="$CPP_FLAGS -DWSS_URL=\"wss://$DOMAIN:$WSS_PORT\""
+fi
+
 function update()
 {
     local SRC=$1
