@@ -1,6 +1,3 @@
-from game import Lobby, Player
-from status import *
-
 # Global table of message types to handlers
 request_handlers = {}
 
@@ -39,37 +36,3 @@ def register(message_type, arguments=None):
         return func
 
     return handler
-
-
-############
-# Handlers #
-############
-
-
-@register("ping")
-async def on_ping(ctx):
-    info("Received ping:", ctx.message, "from", ctx.requester);
-    ctx.message["type"] = "pong"
-    return ctx.message
-
-
-@register("createLobby", [('name', str), ('public', bool)])
-async def on_create_lobby(ctx):
-    # Validate length
-    if len(ctx.message['name']) == 0:
-        return "player name must be at least 1 character long"
-
-    # Create lobby
-    lobby = Lobby.create(Player(ctx.requester, ctx.message['name']), ctx.message['public'])
-
-    reply = {
-        "type": "lobbyCreated",
-        "ownerName": lobby.owner.name,
-        "joinCode": lobby.join_code
-    }
-
-    # Send broadcast
-    if lobby.public:
-        await ctx.broadcast(reply);
-
-    return reply;

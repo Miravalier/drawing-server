@@ -1,7 +1,7 @@
 FROM python:3.9
-WORKDIR /drawing-game
-COPY ./src/python /drawing-game/python
-COPY ./setup /drawing-game/setup
-COPY ./secrets /drawing-game/secrets
-RUN pip install -r /drawing-game/setup/Requirements.txt
-CMD ["python3.9", "/drawing-game/python/main.py"]
+WORKDIR /server
+COPY ./src/python /server/python
+COPY ./setup /server/setup
+COPY ./secrets /server/secrets
+RUN pip install -r /server/setup/Requirements.txt
+CMD ["python3.9", "/server/python/server.py"]

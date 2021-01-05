@@ -2,7 +2,7 @@
 
 . utils.sh
 
-DOCKER_FLAGS='--env-file config.sh'
+DOCKER_FLAGS='--env-file config_env'
 
 # Update certs
 if [[ $WS_UNSECURE != "true" ]]; then

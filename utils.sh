@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. config.sh
+. config_env
 
 function debug() {
     echo -e "[\x1b[95mdebug\x1b[0m] $@"

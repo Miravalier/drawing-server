@@ -2,7 +2,7 @@ version: '2'
 
 services:
   server:
-    env_file: config.sh
+    env_file: config_env
     build: .
     container_name: drawing-server
     ports:
