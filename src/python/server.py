@@ -46,6 +46,9 @@ async def attempt_broadcast(websocket, message):
 class PlayerContext:
     def __init__(self, token):
         self.token = token
+        self.websocket = None
+        self.last_checkin = None
+        self.path = None
 
     async def broadcast(self, message, *, group=None):
         if group is None:
@@ -133,25 +136,28 @@ class PlayerContext:
 
 
 async def main(websocket, path):
-    token = None
     try:
-        # Get "connect" request
+        # Get initial request
         event = await websocket.recv()
 
+        # Make sure request is a string
         if not isinstance(event, str):
             error("Malformed client handshake: not string")
             return
 
+        # Make sure request is valid JSON
         try:
             message = json.loads(event)
         except json.JSONDecodeError:
             error("Malformed client handshake: not JSON")
             return
 
-        if message.get('type', None) != "connect":
+        # Make sure request is either connect or reconnect
+        if message.get('type', None) not in ("connect", "reconnect"):
             error("Malformed client handshake: no connect request")
             return
 
+        # Make sure request has a token
         token = message.get('token', None)
         if not token:
             error("Malformed client handshake: no connect token")
@@ -162,8 +168,16 @@ async def main(websocket, path):
         # Get old context or create new one
         ctx = player_contexts.get(token, None)
         if ctx is None:
+            if message['type'] != "connect":
+                error("Malformed client handshake: reconnect without session")
+                return
             ctx = PlayerContext(token)
-        player_contexts[token] = ctx
+            player_contexts[token] = ctx
+
+        # Disconnect old websocket
+        if ctx.websocket:
+            await ctx.websocket.close()
+            ctx.websocket = None
 
         # Update context websocket, path, and last_checkin
         ctx.websocket = websocket
@@ -173,7 +187,7 @@ async def main(websocket, path):
         # Add websocket to connected sockets
         connected_sockets.add(websocket)
 
-        # Handle connect message
+        # Handle initial message
         await ctx.handle(message)
 
         # Go into handle loop

@@ -77,6 +77,16 @@ export function off(type, handler)
 }
 
 
+export function reconnect()
+{
+    g_connection = new WebSocket(WSS_URL);
+    g_connection.onopen = on_reconnect;
+    g_connection.onmessage = on_message;
+    g_connection.onerror = on_error;
+    g_connection.onclose = on_error;
+}
+
+
 export function connect()
 {
     // Get id from localstorage
@@ -138,6 +148,17 @@ export function dispatch(message)
     }
 }
 
+
+async function on_reconnect()
+{
+    g_connection.send(JSON.stringify({type: "reconnect", token: g_token}));
+    for (let [message, resolve, timeout] of Object.values(g_waiting_messages))
+    {
+        g_connection.send(JSON.stringify(message));
+    }
+}
+
+
 async function on_connect()
 {
     g_connection.send(JSON.stringify({type: "connect", token: g_token}));
@@ -146,6 +167,7 @@ async function on_connect()
         g_connection.send(JSON.stringify(message));
     }
 }
+
 
 async function on_message(event)
 {
@@ -182,6 +204,7 @@ async function on_message(event)
     }
 }
 
+
 async function on_error()
 {
     console.log("Connection to server lost. Reconnecting ...");
@@ -194,5 +217,5 @@ async function on_error()
     // Sleep
     await new Promise(resolve => setTimeout(resolve, g_connection_delay));
     // Re-connect
-    connect();
+    reconnect();
 }

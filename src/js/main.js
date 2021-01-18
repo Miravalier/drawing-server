@@ -79,7 +79,7 @@ async function main()
         console.log("Connection to server established");
         await ui.fadeOut("#main-menu #loading-text", 500);
         await ui.fadeIn("#main-menu .controls", 500);
-        connection.on("connected", message => {
+        connection.on("reconnected", message => {
             console.log("Connection re-established.");
         });
     });

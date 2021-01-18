@@ -1,9 +1,15 @@
 import asyncio
 import random
+import secrets
 import string
 from task import task
 from handler import register
 from messages import *
+
+
+########
+# Init #
+########
 
 
 # Init Function
@@ -33,6 +39,27 @@ class Lobby:
         Lobby.lobbies[self.join_code] = self
 
 
+#############
+# Functions #
+#############
+
+
+def color(value):
+    if not isinstance(value, str):
+        raise TypeError("colors must be strings in the form #xxxxxx")
+    if not re.fullmatch("#[0-9a-fA-F]{6}"):
+        raise ValueError("colors must match the form #xxxxxx")
+    return value.lower()
+
+
+def random_color():
+    return "#{:02x}{:02x}{:02x}".format(
+        secrets.randbelow(256),
+        secrets.randbelow(256),
+        secrets.randbelow(256)
+    )
+
+
 ############
 # Handlers #
 ############
@@ -41,12 +68,21 @@ class Lobby:
 @register("connect")
 async def on_connect(ctx, message):
     """
-    Called whenever a user connects or reconnects.
+    Called whenever a user connects.
     """
-    if not hasattr(ctx, "lobby"):
-        ctx.lobby = None
+    ctx.lobby = None
+    ctx.name = "Guest"
+    ctx.color = random_color()
 
     return {"type": "connected"}
+
+
+@register("reconnect")
+async def on_reconnect(ctx, message):
+    """
+    Called whenever a user reconnects.
+    """
+    return {"type": "reconnected"}
 
 
 @register("createLobby", [('public', bool)])
@@ -54,10 +90,6 @@ async def on_create_lobby(ctx, message):
     """
     Creates a lobby and returns the join code.
     """
-    # Validate length
-    if len(message['name']) == 0:
-        return "player name must be at least 1 character long"
-
     # Create lobby
     lobby = Lobby(message['public'])
 
@@ -70,7 +102,30 @@ async def on_create_lobby(ctx, message):
     if lobby.public:
         await ctx.broadcast(reply);
 
-    return reply;
+    return reply
+
+
+@register("setName", [('name', str)])
+async def on_set_name(ctx, message):
+    # Validate length
+    if len(message['name']) == 0:
+        return "player name must be at least 1 character long"
+    # Store name
+    ctx.name = message['name']
+
+
+@register("setColor", [('color', color)])
+async def on_set_color(ctx, message):
+    ctx.color = color
+
+
+@register("joinLobby", [('joinCode', str)])
+async def on_join_lobby(ctx, message):
+    """
+    Leaves the user's current lobby and joins a new lobby.
+    """
+    lobby = Lobby.lobbies[message['joinCode']]
+    lobby.players
 
 
 @register("getLobbies")
