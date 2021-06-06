@@ -1,3 +1,5 @@
+import * as utils from "./utils.js";
+
 // Globals
 let g_token = null;
 let g_connection = null;
