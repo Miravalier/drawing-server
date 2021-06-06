@@ -33,7 +33,10 @@ export function init()
 
     // Send a heartbeat to avoid getting timed out
     setInterval(() => {
-        send({type: "heartbeat"});
+        if (g_connection && g_connection.readyState == WebSocket.OPEN)
+        {
+            send({type: "heartbeat"});
+        }
     }, g_heartbeat_rate);
 }
 

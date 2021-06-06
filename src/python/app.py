@@ -87,6 +87,9 @@ async def on_connect(ctx, message):
     """
     Called whenever a user connects.
     """
+    if hasattr(ctx, 'lobby') and ctx.lobby is not None:
+        ctx.lobby.remove(ctx)
+
     ctx.lobby = None
     ctx.name = "Guest"
     ctx.color = random_color()
