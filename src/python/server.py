@@ -12,17 +12,47 @@ from typing import Any
 
 import app
 import task
-from handler import request_handlers, register
+from handler import request_handlers, register, player_contexts
 from messages import *
 
 
 HOST = "0.0.0.0"
 FULLCHAIN_PATH = Path('/server/secrets/fullchain.pem')
 PRIVKEY_PATH = Path('/server/secrets/privkey.pem')
+TIMEOUT_SECONDS = 20
 
 
 connected_sockets = set()
-player_contexts = {}
+
+
+@task.task(TIMEOUT_SECONDS/2)
+async def disconnect_checker_task():
+    now = datetime.now()
+    for ctx in tuple(player_contexts.values()):
+        time_elapsed = (now - ctx.last_checkin).total_seconds()
+
+        # If the timeout seconds have not elapsed, skip this ctx
+        if time_elapsed < TIMEOUT_SECONDS:
+            continue
+
+        # Call the user provided disconnect handler
+        disconnect_handler = request_handlers.get('disconnect', [None])[-1]
+        if disconnect_handler is not None:
+            await disconnect_handler(ctx, {})
+
+        # Delete the player context
+        del player_contexts[ctx.token]
+
+        # Close the websocket, if it isn't already closed
+        await ctx.websocket.close()
+
+
+@register("heartbeat")
+async def on_heartbeat(ctx, message):
+    """
+    Used to update the last_checkin and keep the connection alive.
+    """
+    pass
 
 
 @register("ping")
@@ -49,6 +79,11 @@ class PlayerContext:
         self.websocket = None
         self.last_checkin = None
         self.path = None
+
+    def __str__(self):
+        return str({k: v for k, v in self.__dict__.items() if not callable(v)})
+
+    __repr__ = __str__
 
     async def broadcast(self, message, *, group=None):
         if group is None:
@@ -168,9 +203,10 @@ async def main(websocket, path):
         # Get old context or create new one
         ctx = player_contexts.get(token, None)
         if ctx is None:
+            # Convert reconnect to connect if no session exists
             if message['type'] != "connect":
-                error("Malformed client handshake: reconnect without session")
-                return
+                await websocket.send(json.dumps({"type": "reload"}))
+                message['type'] = "connect"
             ctx = PlayerContext(token)
             player_contexts[token] = ctx
 

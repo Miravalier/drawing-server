@@ -1,4 +1,5 @@
 # Global table of message types to handlers
+player_contexts = {}
 request_handlers = {}
 
 

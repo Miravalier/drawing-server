@@ -30,13 +30,30 @@ async def init():
 class Lobby:
     lobbies = {}
 
-    def __init__(self, public):
+    def __init__(self, public=False, owner=None):
         self.public = public
 
-        self.players = []
+        self.players = set()
+        self.owner = owner
+
+        # Generate an unused join code
         self.join_code = "".join(random.choice(string.ascii_letters) for _ in range(8))
+        while self.join_code in Lobby.lobbies:
+            self.join_code = "".join(random.choice(string.ascii_letters) for _ in range(8))
 
         Lobby.lobbies[self.join_code] = self
+
+    def remove(self, ctx):
+        # Remove this player
+        self.players.discard(ctx)
+
+        # If no one is left, delete the lobby
+        if len(self.players) == 0:
+            del Lobby.lobbies[self.join_code]
+
+        # If this player was the owner, pick a new one
+        elif ctx is self.owner:
+            self.owner = random.choice(self.players)
 
 
 #############
@@ -85,17 +102,34 @@ async def on_reconnect(ctx, message):
     return {"type": "reconnected"}
 
 
+@register("disconnect")
+async def on_disconnect(ctx, message):
+    """
+    Called whenever a user doesn't communicate for 60 seconds,
+    or if the user sends this request specifically.
+    """
+    # Leave the player's lobby
+    if ctx.lobby:
+        ctx.lobby.remove(ctx)
+
+
 @register("createLobby", [('public', bool)])
 async def on_create_lobby(ctx, message):
     """
     Creates a lobby and returns the join code.
     """
+    if ctx.lobby:
+        ctx.lobby.remove(ctx)
+
     # Create lobby
-    lobby = Lobby(message['public'])
+    lobby = Lobby(message['public'], ctx)
+    ctx.lobby = lobby
 
     reply = {
         "type": "lobbyCreated",
-        "joinCode": lobby.join_code
+        "joinCode": lobby.join_code,
+        "players": len(lobby.players),
+        "ownerName": lobby.owner.name
     }
 
     # Send broadcast
@@ -124,8 +158,35 @@ async def on_join_lobby(ctx, message):
     """
     Leaves the user's current lobby and joins a new lobby.
     """
+    if ctx.lobby:
+        ctx.lobby.remove(ctx)
     lobby = Lobby.lobbies[message['joinCode']]
-    lobby.players
+    lobby.players.add(ctx)
+    ctx.lobby = lobby
+
+    reply = {
+        "type": "lobbyJoined",
+        "joinCode": lobby.join_code,
+        "players": len(lobby.players),
+        "ownerName": lobby.owner.name
+    }
+
+    return reply
+
+
+@register("leaveLobby")
+async def on_leave_lobby(ctx, message):
+    """
+    Leaves the user's current lobby.
+    """
+    if ctx.lobby:
+        ctx.lobby.remove(ctx)
+
+    reply = {
+        "type": "lobbyLeft",
+    }
+
+    return reply
 
 
 @register("getLobbies")
@@ -136,16 +197,12 @@ async def on_get_lobbies(ctx, message):
     return {
         "type": "lobbyList",
         "lobbies": [
-            {"joinCode": lobby.join_code, "players": len(lobby.players)}
+            {
+                "joinCode": lobby.join_code,
+                "players": len(lobby.players),
+                "ownerName": lobby.owner.name
+            }
             for lobby in Lobby.lobbies.values()
             if lobby.public
         ]
     }
-
-
-@register("heartbeat")
-async def on_heartbeat(ctx, message):
-    """
-    Used to update the last_checkin and keep the connection alive.
-    """
-    pass

@@ -8,6 +8,7 @@ const g_request_timeout = 15000;
 const g_timeout_poll_rate = 3000;
 const g_message_handlers = {};
 const g_waiting_messages = {};
+const g_heartbeat_rate = 3000;
 
 // Public Functions
 export function init()
@@ -29,6 +30,11 @@ export function init()
             resolve(Promise.reject(new Error("request timed out")));
         }
     }, g_timeout_poll_rate);
+
+    // Send a heartbeat to avoid getting timed out
+    setInterval(() => {
+        send({type: "heartbeat"});
+    }, g_heartbeat_rate);
 }
 
 

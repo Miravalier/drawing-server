@@ -75,6 +75,10 @@ async function main()
 
     // Prepare network reply handlers
     connection.on("success", () => {});
+    connection.on("reload", message => {
+        console.log("Session terminated, reloading.");
+        location.reload();
+    });
     connection.once("connected", async message => {
         console.log("Connection to server established");
         await ui.fadeOut("#main-menu #loading-text", 500);
