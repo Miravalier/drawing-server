@@ -80,6 +80,9 @@ class PlayerContext:
         self.last_checkin = None
         self.path = None
 
+    def __hash__(self):
+        return hash(self.token)
+
     def __str__(self):
         return str({k: v for k, v in self.__dict__.items() if not callable(v)})
 
@@ -110,6 +113,7 @@ class PlayerContext:
         await self.websocket.send(message)
 
     async def handle(self, message):
+        debug("API Request:", message)
         # Call the appropriate handler
         if message['type'] in request_handlers:
             try:

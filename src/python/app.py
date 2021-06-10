@@ -2,6 +2,8 @@ import asyncio
 import random
 import secrets
 import string
+from dataclasses import dataclass
+from enum import Enum
 from task import task
 from handler import register
 from messages import *
@@ -27,6 +29,40 @@ async def init():
 ###########
 
 
+class GameError(Exception):
+    pass
+
+
+class StoryElement:
+    pass
+
+
+@dataclass
+class StoryDrawing(StoryElement):
+    player: str
+    image: str
+
+    def to_dict(self):
+        return {'type': 'storyDrawing', 'player': self.player, 'image': self.image}
+
+
+@dataclass
+class StoryCaption(StoryElement):
+    player: str
+    text: str
+
+    def to_dict(self):
+        return {'type': 'storyCaption', 'player': self.player, 'text': self.text}
+
+
+class LobbyState(Enum):
+    FORMING = 1
+    PROMPTING = 2
+    DRAWING = 3
+    CAPTIONING = 4
+    REVIEWING = 5
+
+
 class Lobby:
     lobbies = {}
 
@@ -35,13 +71,86 @@ class Lobby:
 
         self.players = set()
         self.owner = owner
+        self.round_timer = 30
+
+        # Increase as the game progresses
+        self.state = LobbyState.FORMING
+        self.round = 0
 
         # Generate an unused join code
-        self.join_code = "".join(random.choice(string.ascii_letters) for _ in range(8))
-        while self.join_code in Lobby.lobbies:
+        self.join_code = None
+        while self.join_code is None or self.join_code in Lobby.lobbies:
             self.join_code = "".join(random.choice(string.ascii_letters) for _ in range(8))
 
         Lobby.lobbies[self.join_code] = self
+
+    async def state_change(self):
+        self.round += 1
+        messages = []
+        # To reviewing state
+        if self.round >= len(self.players):
+            self.state = LobbyState.REVIEWING
+            for ctx in self.players:
+                ctx.prompt = None
+                messages.append(ctx.send({
+                    "type": "reviewing"
+                }))
+            # Convert stories from a dictionary to a list
+            self.stories = list(self.stories.values())
+            self.stories_reviewed = 0
+            self.elements_reviewed = 0
+        # To captioning state
+        if self.state == LobbyState.DRAWING:
+            self.state = LobbyState.CAPTIONING
+            for ctx in self.players:
+                # Zero out the prompt for everyone, because we're going into captioning mode
+                ctx.prompt = None
+                # Append everyone's drawing to their held story
+                self.stories[ctx.story_creator].append(StoryDrawing(ctx.name, ctx.drawing_data))
+                # Move the creator of the story back
+                ctx.story_creator = self.previous_player[ctx.story_creator]
+                # Send out the previous person's drawing to be captioned
+                messages.append(ctx.send({
+                    "type": "captionPrompt",
+                    "data": self.previous_player[ctx].drawing_data
+                }))
+        # To drawing state
+        elif self.state == LobbyState.PROMPTING or self.state == LobbyState.CAPTIONING:
+            self.state = LobbyState.DRAWING
+            for ctx in self.players:
+                # Zero out the drawing data, because we're going into drawing mode
+                ctx.drawing_data = None
+                # Append everyone's prompt to their held story
+                self.stories[ctx.story_creator].append(StoryCaption(ctx.name, ctx.prompt))
+                # Move the creator of the story back
+                ctx.story_creator = self.previous_player[ctx.story_creator]
+                # Send out the previous person's caption to be drawn
+                messages.append(ctx.send({
+                    "type": "drawPrompt",
+                    "text": self.previous_player[ctx].prompt
+                }))
+        # Back to forming state
+        elif self.state == LobbyState.REVIEWING:
+            self.state = LobbyState.FORMING
+            for ctx in self.players:
+                message.append(ctx.send({
+                    "type": "lobbyJoined",
+                    "joinCode": self.join_code,
+                    "roundTimer": self.round_timer,
+                    "ownerName": self.owner.name
+                    "players": [ctx.name for ctx in self.players],
+                }))
+        # Send any messages generated
+        await asyncio.gather(*messages)
+
+    def generate_player_order(self):
+        player_order = list(self.players)
+        random.shuffle(player_order)
+        self.next_player = {ctx: player_order[(i+1) % len(player_order)] for i, ctx in enumerate(player_order)}
+        self.previous_player = {v: k for k, v in self.next_player.items()}
+
+    async def broadcast(self, message):
+        await asyncio.gather(*[ctx.send(message) for ctx in self.players])
 
     def remove(self, ctx):
         # Remove this player
@@ -53,7 +162,7 @@ class Lobby:
 
         # If this player was the owner, pick a new one
         elif ctx is self.owner:
-            self.owner = random.choice(self.players)
+            self.owner = random.choice(tuple(self.players))
 
 
 #############
@@ -116,6 +225,40 @@ async def on_disconnect(ctx, message):
         ctx.lobby.remove(ctx)
 
 
+@register("nextReview")
+async def on_review_next(ctx, message):
+    """
+    Move the review phase to the next caption / image.
+    """
+    if not ctx.lobby:
+        raise GameError("No lobby")
+
+    if ctx.lobby.state != LobbyState.REVIEWING:
+        raise GameError("Invalid lobby state")
+
+    if ctx is not ctx.lobby.owner:
+        raise GameError("Not lobby owner")
+
+
+    story = ctx.lobby.stories[ctx.lobby.stories_reviewed]
+
+    # Move on to the next story when all elements are reviewed
+    if ctx.lobby.elements_reviewed >= len(story):
+        ctx.lobby.elements_reviewed = 0
+        ctx.lobby.stories_reviewed += 1
+        # If another nextReview is received after all stories have
+        # been reviewed, return the the lobby.
+        if ctx.lobby.stories_reviewed >= len(ctx.lobby.stories):
+            await ctx.lobby.state_change()
+            return
+        story = ctx.lobby.stories[ctx.lobby.stories_reviewed]
+
+    # Display the next element in this story
+    element = story[ctx.lobby.elements_reviewed]
+    ctx.lobby.elements_reviewed += 1
+    await ctx.lobby.broadcast(element.to_dict())
+
+
 @register("createLobby", [('public', bool)])
 async def on_create_lobby(ctx, message):
     """
@@ -131,6 +274,7 @@ async def on_create_lobby(ctx, message):
     reply = {
         "type": "lobbyCreated",
         "joinCode": lobby.join_code,
+        "roundTimer": lobby.round_timer,
         "players": len(lobby.players),
         "ownerName": lobby.owner.name
     }
@@ -163,15 +307,21 @@ async def on_join_lobby(ctx, message):
     """
     if ctx.lobby:
         ctx.lobby.remove(ctx)
-    lobby = Lobby.lobbies[message['joinCode']]
+
+    lobby = Lobby.lobbies.get(message['joinCode'])
+
+    if lobby.state is not LobbyState.FORMING:
+        raise GameError("Game has already started")
+
     lobby.players.add(ctx)
     ctx.lobby = lobby
 
     reply = {
         "type": "lobbyJoined",
         "joinCode": lobby.join_code,
-        "players": len(lobby.players),
+        "roundTimer": lobby.round_timer,
         "ownerName": lobby.owner.name
+        "players": [ctx.name for ctx in lobby.players],
     }
 
     return reply
@@ -182,14 +332,69 @@ async def on_leave_lobby(ctx, message):
     """
     Leaves the user's current lobby.
     """
-    if ctx.lobby:
-        ctx.lobby.remove(ctx)
+    if not ctx.lobby:
+        return GameError("No lobby")
+
+    ctx.lobby.remove(ctx)
 
     reply = {
         "type": "lobbyLeft",
     }
 
     return reply
+
+
+@register("startGame")
+async def on_start_game(ctx, message):
+    if not ctx.lobby:
+        raise GameError("No lobby")
+
+    if ctx.lobby.state != LobbyState.FORMING:
+        raise GameError("Invalid lobby state")
+
+    if ctx is not ctx.lobby.owner:
+        raise GameError("Not lobby owner")
+
+    ctx.lobby.generate_player_order()
+    ctx.lobby.state = LobbyState.PROMPTING
+    ctx.lobby.stories = {ctx: [] for ctx in ctx.lobby.players}
+
+    # Set each player's prompt to None
+    for ctx in ctx.lobby.players:
+        ctx.prompt = None
+        ctx.story_creator = ctx
+
+    await ctx.lobby.broadcast({
+        "type": "startGame"
+    })
+
+
+@register("submitPrompt", [('prompt', str)])
+async def on_submit_prompt(ctx, message):
+    if not ctx.lobby:
+        raise GameError("No lobby")
+    if ctx.lobby.state != LobbyState.PROMPTING and ctx.lobby.state != LobbyState.CAPTIONING:
+        raise GameError("Invalid lobby state")
+
+    ctx.prompt = message['prompt']
+
+    # Once all prompts are submitted, switch to drawing/reviewing mode
+    if all(ctx.prompt for ctx in ctx.lobby.players):
+        await ctx.lobby.state_change()
+
+
+@register("submitDrawing", [('data', str)])
+async def on_submit_drawing(ctx, message):
+    if not ctx.lobby:
+        raise GameError("No lobby")
+    if ctx.lobby.state != LobbyState.PROMPTING:
+        raise GameError("Invalid lobby state")
+
+    ctx.drawing_data = message['data']
+
+    # Once all drawings are submitted, switch to captioning/reviewing mode
+    if all(ctx.drawing_data for ctx in ctx.lobby.players):
+        await ctx.lobby.state_change()
 
 
 @register("getLobbies")
